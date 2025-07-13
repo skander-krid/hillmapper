@@ -56,8 +56,6 @@ def extract_scanset_from_query(template):
         return None
     with open("/tmp/profile.json", "r") as file:
         profile = file.read()
-        with open("profile.json", "w") as outfile:
-            json.dump(json.loads(profile), outfile, indent=2)
     return extract_scanset_from_profile(json.loads(profile))
 
 def get_tpcds_scansets():

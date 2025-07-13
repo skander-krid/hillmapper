@@ -15,15 +15,22 @@ namespace py = pybind11;
 
 using TableIndex = std::size_t;
 
-using Distance = long;
+using Distance = double;
 
-// TODO: Use different reperesentation: vector where value at index i is the
-// number of occurences of table i in the scanset.
-// Then for computing the distance, I can avoid any branching + vectorize.
-// TODO: Or switch to scanSET semantics instead of scanMULTISETS. Then I can
-// represent a scanset as a bitmap, and compute the distance with vectorized
-// xor.
-using Scanset = std::vector<TableIndex>;
+using RawScanset = std::vector<TableIndex>; // A scanset is a vector of table indices
+
+using Bitmap = std::vector<std::uint64_t>; // Bitmap representation of a scanset
+
+struct Scanset {
+    const Bitmap bitmap; // Bitmap representation of a scanset
+    const RawScanset tables; // We can assume that all tables are distinct!!!
+    size_t n_conflicts = 0; // Number of conflicts in the scanset. We need this when translating scansets.
+
+    Scanset() = default;
+
+    Scanset(const Bitmap&& bm, const RawScanset&& tbl, size_t n_conflicts = 0)
+    : bitmap(std::move(bm)), tables(std::move(tbl)), n_conflicts(n_conflicts) {};
+};
 
 using Assignment = std::unordered_map<TableIndex, TableIndex>;
 
@@ -43,93 +50,82 @@ Assignment get_random_assignment(TableIndex n, TableIndex k,
 	return assignment;
 }
 
-Scanset convert_scanset_for_distance(const Scanset &scanset, const Assignment &assignment)
+Bitmap make_bitmap(const RawScanset& X, TableIndex num_tables)
 {
-	// table id → #occurrences
-	std::unordered_map<TableIndex, size_t> ts;
-	for (TableIndex r_table : scanset)
-		++ts[r_table];
+    const std::size_t num_words = (num_tables + 64) / 64; // round up
+    Bitmap bitmap(num_words, 0); // bitmap must be zero-initialised
 
-	// Build collision map: b_table -> { all r_tables that map to it }
-	std::unordered_map<TableIndex, std::unordered_set<TableIndex>> collisions;
-	std::unordered_set<TableIndex>                          problematic_r_tables;
+    for (TableIndex v : X)
+    {
+        std::size_t word = v >> 6; // v / 64
+        std::size_t bit  = v & 0x3F; // v % 64
+        bitmap[word] |= (std::uint64_t(1) << bit);
+    }
 
-	for (TableIndex r_table : scanset)
-	{
-		TableIndex b_table = assignment.at(r_table);
-		collisions[b_table].insert(r_table);
-		problematic_r_tables.insert(r_table);
-	}
-
-	// Decide which r_tables survive when collisions occur
-	std::unordered_set<TableIndex> chosen_r_tables;
-
-	for (const auto &kv : collisions)
-	{
-		const auto &r_tables = kv.second;
-
-		if (r_tables.size() == 1)
-		{
-			chosen_r_tables.insert(*r_tables.begin());
-		}
-		else
-		{
-			// Pick the r_table with the highest occurrence count in scanset
-			TableIndex best_r_table  = -1;
-			size_t best_num_occs = 0;
-
-			for (TableIndex r_table : r_tables)
-			{
-				size_t occs = ts[r_table];
-				if (occs > best_num_occs)
-				{
-					best_num_occs = occs;
-					best_r_table  = r_table;
-				}
-			}
-			chosen_r_tables.insert(best_r_table);
-		}
-	}
-
-	// Produce the converted scanset
-	Scanset result;
-	result.reserve(scanset.size());
-
-	for (TableIndex table : scanset)
-	{
-		if (!problematic_r_tables.count(table) // not a collision
-		    || chosen_r_tables.count(table))   // or chosen survivor
-		{
-			result.push_back(assignment.at(table));
-		}
-		else
-		{
-			result.push_back(-1); // masked out
-		}
-	}
-	return result;
+    return bitmap;
 }
 
-Distance distance(const Scanset &a, const Scanset &b)
+Scanset convert_scanset_for_distance(
+    const Scanset &scanset,
+    const Assignment &assignment,
+    size_t num_tables_in_scanset_bitmap)
 {
-	// TODO: We can do better with sorted vector scansets and double pointer
-	// approach.
-	std::unordered_map<Distance, std::ptrdiff_t> delta;
+	// For each tpcds table count the number of redset tables that map to it.
+	std::unordered_map<TableIndex, size_t> bt_counts;
+    size_t n_conflicts = 0;
 
-	// Increment counts for the first scanset.
-	for (Distance v : a)
-		++delta[v];
+    // Iterate over the scanset bitmap bit-by-bit
+	for (TableIndex r_table : scanset.tables)
+	{
+		TableIndex b_table = assignment.at(r_table);
+		bt_counts[b_table]++;
+	}
 
-	// Decrement counts for the second scanset.
-	for (Distance v : b)
-		--delta[v];
+	// Produce the converted scanset. Iterate over bt_counts.
+	RawScanset result;
+    for (const auto& [b_table, count] : bt_counts) {
+        result.push_back(b_table);
+        if (count > 1) {
+            n_conflicts += count - 1; // Count conflicts
+        }
+    }
 
-	// Accumulate absolute differences.
-	std::size_t dist = 0;
-	for (const auto &[value, diff] : delta)
-		dist += std::abs(diff);
+	return Scanset(std::move(make_bitmap(result, num_tables_in_scanset_bitmap)), std::move(result), n_conflicts);
+}
 
-	return dist;
+Distance distance(const Scanset &scanset_1, const Scanset &scanset_2)
+{
+    // Usually only one or very few values.
+    // If the whole workload references no more than 64 distinct tables,
+    // then any scanset will fit into a single 64-bit integer.
+    // So no SIMD needed.
+
+    auto& a = scanset_1.bitmap;
+    auto& b = scanset_2.bitmap;
+
+	Distance dist = 0;
+    for (size_t i = 0; i < std::min(a.size(), b.size()); i++)
+    {
+        // XOR the two scansets and count the number of bits set to 1.
+        // This is the Hamming distance.
+        dist += __builtin_popcountll(a[i] ^ b[i]);
+    }
+    // If one scanset is longer, add the remaining bits.
+    if (a.size() < b.size())
+    {
+        for (size_t i = a.size(); i < b.size(); i++)
+        {
+            dist += __builtin_popcountll(b[i]);
+        }
+    }
+    else if (b.size() < a.size())
+    {
+        for (size_t i = b.size(); i < a.size(); i++)
+        {
+            dist += __builtin_popcountll(a[i]);
+        }
+    }
+    return dist + scanset_1.n_conflicts + scanset_2.n_conflicts;
 }
 
 // BK-tree implementation to speed up nearest-scanset-neighbor search.
@@ -139,7 +135,7 @@ class BKTree
 private:
 	struct Node
 	{
-		Scanset                                        item;
+		Scanset item;
 		std::unordered_map<Distance, std::unique_ptr<Node>> children;
 
 		explicit Node(const Scanset &item_) : item(item_) {}
@@ -182,27 +178,30 @@ public:
 	}
 
 	// Returns {nearest-item, distance}.
-	std::pair<Scanset, Distance> nearest(const Scanset &query) const
+	std::pair<const Scanset*, Distance> nearest(const Scanset &query) const
 	{
-		std::pair<Scanset, Distance> best{{}, std::numeric_limits<Distance>::max()};
+        Distance best_distance = std::numeric_limits<Distance>::max();
+        const Scanset* best_item = nullptr;
 		if (!root)
-			return best;
+			return {best_item, best_distance};
 
 		std::function<void(const Node *)> search = [&](const Node *node)
 		{
 			Distance d = distance(query, node->item);
-			if (d < best.second)
-				best = {node->item, d};
+			if (d < best_distance) {
+                best_distance = d;
+                best_item = &node->item;
+            }
 
 			for (const auto &[child_dist, child] : node->children)
 			{
-				if (std::abs(d - best.second) <= child_dist && child_dist <= d + best.second)
+				if (std::abs(d - best_distance) <= child_dist && child_dist <= d + best_distance)
 					search(child.get());
 			}
 		};
 
 		search(root.get());
-		return best;
+		return {best_item, best_distance};
 	}
 };
 
@@ -214,14 +213,16 @@ inline std::vector<std::size_t> full_rs_index_range(size_t n)
 	return idx;
 }
 
-double get_assignment_distance(std::vector<size_t>  &redset_scanset_counters,
+Distance get_assignment_distance(std::vector<size_t> &redset_scanset_counters,
                                std::vector<Scanset> &redset_scansets, const Assignment &assignment,
                                const std::vector<std::size_t> &affected_r_scansets, // Their indexes
                                const BKTree &bk_tree, std::vector<Distance> &per_rs_distance,
-                               bool compute_per_rs_distance, bool update_per_rs_distance = false)
+                               size_t num_tables_in_scanset_bitmap,
+                               bool compute_per_rs_distance, bool update_per_rs_distance = false
+                               )
 {
-	double total_distance = 0.0;
-	double delta          = 0.0;
+	Distance total_distance = 0.0;
+	Distance delta          = 0.0;
 
 	for (std::size_t r_scanset_idx : affected_r_scansets)
 	{
@@ -229,7 +230,7 @@ double get_assignment_distance(std::vector<size_t>  &redset_scanset_counters,
 		std::size_t occs = redset_scanset_counters[r_scanset_idx];
 
 		Distance new_distance =
-		    bk_tree.nearest(convert_scanset_for_distance(r_scanset, assignment)).second *
+		    bk_tree.nearest(convert_scanset_for_distance(r_scanset, assignment, num_tables_in_scanset_bitmap)).second *
 		    static_cast<Distance>(occs);
 
 		if (compute_per_rs_distance)
@@ -255,7 +256,8 @@ std::pair<Distance, Assignment> thread_work(
     std::vector<Scanset>             tpcds_scansets,
     std::vector<std::vector<size_t>> r_table_to_scansets, // Maps redset table to list of
                                                           // scanset indexes it affects
-    TableIndex n_redset_tables, TableIndex n_tpcds_tables)
+    TableIndex n_redset_tables, TableIndex n_tpcds_tables,
+    size_t num_tables_in_scanset_bitmap)
 {
 	Distance     best_distance = std::numeric_limits<Distance>::infinity();
 	Assignment best_assignment{};
@@ -269,11 +271,13 @@ std::pair<Distance, Assignment> thread_work(
 		Distance              current_distance =
 		    get_assignment_distance(redset_scanset_counters, redset_scansets, assignment,
 		                            all_rs_indices, bk_tree, current_per_rs_distance,
+                                    num_tables_in_scanset_bitmap,
 		                            /*compute_per_rs_distance=*/true); // TODO: Sth missing?
 		while (true)
 		{
-			double              best_new_distance   = std::numeric_limits<Distance>::infinity();
+			Distance best_new_distance   = std::numeric_limits<Distance>::infinity();
 			std::pair<int, int> best_new_assignment = {-1, -1};
+            // TODO: Randomize the order in which I traverse rt and bt to avoid repetitive assignments.
 			for (TableIndex rt = 1; rt <= n_redset_tables; rt++)
 			{
 				TableIndex old_assignment = assignment[rt];
@@ -283,10 +287,11 @@ std::pair<Distance, Assignment> thread_work(
 						continue; // skip the current assignment
 
 					assignment[rt] = bt; // try a new assignment
-					double new_distance =
+					Distance new_distance =
 					    current_distance + get_assignment_distance(redset_scanset_counters, redset_scansets,
 					                                               assignment, r_table_to_scansets[rt],
 					                                               bk_tree, current_per_rs_distance,
+                                                                   num_tables_in_scanset_bitmap,
 					                                               /*compute_per_rs_distance=*/false);
 
 					if (new_distance < best_new_distance)
@@ -308,6 +313,7 @@ std::pair<Distance, Assignment> thread_work(
 			// update per-scanset distances in place
 			get_assignment_distance(redset_scanset_counters, redset_scansets, assignment, all_rs_indices,
 			                        bk_tree, current_per_rs_distance,
+                                    num_tables_in_scanset_bitmap,
 			                        /*compute_per_rs_distance=*/false,
 			                        /*update_per_rs_distance=*/true);
 
@@ -326,18 +332,32 @@ std::pair<Distance, Assignment> thread_work(
 std::pair<Distance, Assignment> find_optimal_bijection(
     std::size_t n_threads, std::size_t n_iterations_per_thread,
     const std::vector<std::size_t> &redset_scanset_counters,
-    const std::vector<Scanset> &redset_scansets, const std::vector<Scanset> &tpcds_scansets,
+    const std::vector<RawScanset> &raw_redset_scansets, const std::vector<RawScanset> &raw_tpcds_scansets,
     const std::vector<std::vector<std::size_t>> &r_table_to_scansets, TableIndex n_redset_tables,
     TableIndex n_tpcds_tables)
 {
+    const TableIndex num_tables_in_scanset_bitmap = std::max(n_redset_tables, n_tpcds_tables);
+
+    // Convert raw scansets to Scanset objects
+    std::vector<Scanset> redset_scansets;
+    for (const auto &rs : raw_redset_scansets)
+    {
+        redset_scansets.emplace_back(std::move(make_bitmap(rs, num_tables_in_scanset_bitmap)), std::move(rs));
+    }
+    std::vector<Scanset> tpcds_scansets;
+    for (const auto &ts : raw_tpcds_scansets)
+    {
+        tpcds_scansets.emplace_back(std::move(make_bitmap(ts, num_tables_in_scanset_bitmap)), std::move(ts));
+    }
+
 	// Build the shared BK-tree
 	BKTree bk_tree(tpcds_scansets);
 
 	// Start threads
 	std::vector<std::thread> workers;
-	std::mutex               guard; // protects global best
-	Distance                   best_distance = std::numeric_limits<Distance>::infinity();
-	Assignment               best_assignment;
+	std::mutex guard; // protects global best
+	Distance best_distance = std::numeric_limits<Distance>::infinity();
+	Assignment best_assignment;
 
 	for (std::size_t tid = 0; tid < n_threads; ++tid)
 	{
@@ -348,7 +368,7 @@ std::pair<Distance, Assignment> find_optimal_bijection(
 			        thread_work(n_iterations_per_thread, tid,
 			                    bk_tree, // shared
 			                    redset_scanset_counters, redset_scansets, tpcds_scansets,
-			                    r_table_to_scansets, n_redset_tables, n_tpcds_tables);
+			                    r_table_to_scansets, n_redset_tables, n_tpcds_tables, num_tables_in_scanset_bitmap);
 
 			    std::lock_guard<std::mutex> lk(guard);
 			    // TODO: We can do better (no locks) here, but probably not worth the
