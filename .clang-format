@@ -1,0 +1,33 @@
+# ---------- Global defaults (C / C++ / Obj-C) ----------
+BasedOnStyle: LLVM          # Start from LLVM presets
+Language:        Cpp        # Default language
+
+# --- Indentation & tabs ---
+UseTab:          ForIndentation   # Real tabs for each full indent level
+IndentWidth:     2                # One logical indent = 4 columns
+TabWidth:        2                # A tab *looks* 4 columns wide
+ContinuationIndentWidth: 4        # Wrapped lines look double-indented
+
+# --- Braces, layout, and wrapping ---
+BreakBeforeBraces: Allman         # Open brace on its own line
+AllowShortFunctionsOnASingleLine: Inline
+PenaltyReturnTypeOnItsOwnLine: 200
+ColumnLimit: 100                  # Soft wrap guide
+
+# --- Alignment helpers ---
+AlignConsecutiveAssignments:  true
+AlignConsecutiveDeclarations: true
+AlignTrailingComments:        true
+
+# --- Pre-processor handling ---
+IndentPPDirectives: AfterHash     #   #if nested -> indented
+PPIndentWidth:       -1           # -1 → follow IndentWidth
+
+# ---------- Overrides for other languages ----------
+# (handy if this repo mixes JS / Proto / etc.)
+---
+Language:        JavaScript
+BasedOnStyle:    Google
+IndentWidth:     2
+TabWidth:        2
+UseTab:          Never
