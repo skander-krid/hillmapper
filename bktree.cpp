@@ -302,6 +302,8 @@ std::pair<Distance, Assignment> thread_work(
 				}
 				assignment[rt] = old_assignment; // revert the assignment
 			}
+            // TODO:!!! When I have the choice over which bt to choose, prefer an unassigned one.
+            // To minimize the number of times I suplicate tables later in workload generation.
 			if (best_new_distance >= current_distance)
 			{
 				break; // Local optimum reached
@@ -389,16 +391,6 @@ std::pair<Distance, Assignment> find_optimal_bijection(
 
 PYBIND11_MODULE(bktree, m)
 {
-	py::class_<BKTree>(m, "BKTree")
-	    .def(py::init<>())                             // empty tree
-	    .def(py::init<const std::vector<Scanset> &>(), // from data
-	         py::arg("scansets"))
-	    .def("add", &BKTree::add, py::arg("item"))
-	    .def("nearest", &BKTree::nearest, py::arg("query"),
-	         R"pbdoc(
-                 Return a tuple (nearest_scanset, distance).
-             )pbdoc");
-
 	m.def("find_optimal_bijection", &find_optimal_bijection, py::arg("n_threads"),
 	      py::arg("n_iterations_per_thread"), py::arg("redset_scanset_counters"),
 	      py::arg("redset_scansets"), py::arg("tpcds_scansets"), py::arg("r_table_to_scansets"),
