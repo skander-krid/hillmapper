@@ -1,17 +1,17 @@
 {
   "rows_returned": 15057,
-  "latency": 0.086160905,
+  "latency": 0.07959944,
   "result_set_size": 1385244,
   "cumulative_rows_scanned": 1382622617,
   "cumulative_cardinality": 1034071,
   "extra_info": {},
-  "cpu_time": 1.0525282169999997,
-  "blocked_thread_time": 0.0,
+  "cpu_time": 1.0401908189999998,
+  "blocked_thread_time": 0.12,
   "query_name": "select i_item_id ,i_item_desc ,i_category ,i_class ,i_current_price ,sum(ss_ext_sales_price) as itemrevenue ,sum(ss_ext_sales_price)*100/sum(sum(ss_ext_sales_price)) over (partition by i_class) as revenueratio from store_sales ,item ,date_dim where ss_item_sk = i_item_sk and i_category in ('Women', 'Jewelry', 'Books') and ss_sold_date_sk = d_date_sk and d_date between cast('1998-04-14' as date) and (cast('1998-04-14' as date) + INTERVAL '30' DAY) group by i_item_id ,i_item_desc ,i_category ,i_class ,i_current_price order by i_category ,i_class ,i_item_id ,i_item_desc ,revenueratio",
   "children": [
     {
       "result_set_size": 1385244,
-      "operator_timing": 0.00045941,
+      "operator_timing": 0.000503723,
       "operator_rows_scanned": 0,
       "cumulative_rows_scanned": 1382622617,
       "operator_cardinality": 15057,
@@ -30,11 +30,11 @@
         ],
         "Estimated Cardinality": "459315"
       },
-      "cpu_time": 1.0525282169999997,
+      "cpu_time": 1.0401908189999998,
       "children": [
         {
           "result_set_size": 1385244,
-          "operator_timing": 0.09982392999999999,
+          "operator_timing": 0.05656062099999998,
           "operator_rows_scanned": 0,
           "cumulative_rows_scanned": 1382622617,
           "operator_cardinality": 15057,
@@ -50,11 +50,11 @@
               "((sum(\"10gb\".main.store_sales.ss_ext_sales_price) * 100) / sum(sum(\"10gb\".main.store_sales.ss_ext_sales_price)) OVER (PARTITION BY \"10gb\".main.item.i_class)) ASC"
             ]
           },
-          "cpu_time": 1.0520688069999997,
+          "cpu_time": 1.0396870959999998,
           "children": [
             {
               "result_set_size": 1385244,
-              "operator_timing": 0.000386852,
+              "operator_timing": 0.000445623,
               "operator_rows_scanned": 0,
               "cumulative_rows_scanned": 1382622617,
               "operator_cardinality": 15057,
@@ -73,11 +73,11 @@
                 ],
                 "Estimated Cardinality": "459315"
               },
-              "cpu_time": 0.9522448769999998,
+              "cpu_time": 0.9831264749999997,
               "children": [
                 {
                   "result_set_size": 1385244,
-                  "operator_timing": 0.001304753,
+                  "operator_timing": 0.0015990059999999998,
                   "operator_rows_scanned": 0,
                   "cumulative_rows_scanned": 1382622617,
                   "operator_cardinality": 15057,
@@ -96,11 +96,11 @@
                     ],
                     "Estimated Cardinality": "459315"
                   },
-                  "cpu_time": 0.9518580249999998,
+                  "cpu_time": 0.9826808519999998,
                   "children": [
                     {
                       "result_set_size": 1505700,
-                      "operator_timing": 1.8041e-05,
+                      "operator_timing": 2.1697e-05,
                       "operator_rows_scanned": 0,
                       "cumulative_rows_scanned": 1382622617,
                       "operator_cardinality": 15057,
@@ -119,11 +119,11 @@
                         ],
                         "Estimated Cardinality": "459315"
                       },
-                      "cpu_time": 0.9505532719999998,
+                      "cpu_time": 0.9810818459999998,
                       "children": [
                         {
                           "result_set_size": 1505700,
-                          "operator_timing": 0.08241718399999999,
+                          "operator_timing": 0.102663884,
                           "operator_rows_scanned": 0,
                           "cumulative_rows_scanned": 1382622617,
                           "operator_cardinality": 15057,
@@ -133,11 +133,11 @@
                           "extra_info": {
                             "Projections": "sum(sum(ss_ext_sales_price)) OVER (PARTITION BY i_class)"
                           },
-                          "cpu_time": 0.9505352309999998,
+                          "cpu_time": 0.9810601489999998,
                           "children": [
                             {
                               "result_set_size": 1264788,
-                              "operator_timing": 0.000545459,
+                              "operator_timing": 0.000545645,
                               "operator_rows_scanned": 0,
                               "cumulative_rows_scanned": 1382622617,
                               "operator_cardinality": 15057,
@@ -155,11 +155,11 @@
                                 ],
                                 "Estimated Cardinality": "459315"
                               },
-                              "cpu_time": 0.8681180469999998,
+                              "cpu_time": 0.8783962649999998,
                               "children": [
                                 {
                                   "result_set_size": 1264788,
-                                  "operator_timing": 0.10131552499999998,
+                                  "operator_timing": 0.099174561,
                                   "operator_rows_scanned": 0,
                                   "cumulative_rows_scanned": 1382622617,
                                   "operator_cardinality": 15057,
@@ -177,11 +177,11 @@
                                     "Aggregates": "sum(#5)",
                                     "Estimated Cardinality": "459315"
                                   },
-                                  "cpu_time": 0.8675725879999998,
+                                  "cpu_time": 0.8778506199999998,
                                   "children": [
                                     {
                                       "result_set_size": 5766984,
-                                      "operator_timing": 0.0002899500000000001,
+                                      "operator_timing": 0.0002964500000000001,
                                       "operator_rows_scanned": 0,
                                       "cumulative_rows_scanned": 1382622617,
                                       "operator_cardinality": 80097,
@@ -199,11 +199,11 @@
                                         ],
                                         "Estimated Cardinality": "1223312"
                                       },
-                                      "cpu_time": 0.7662570629999998,
+                                      "cpu_time": 0.7786760589999998,
                                       "children": [
                                         {
                                           "result_set_size": 5766984,
-                                          "operator_timing": 0.006152019999999999,
+                                          "operator_timing": 0.0060303460000000015,
                                           "operator_rows_scanned": 0,
                                           "cumulative_rows_scanned": 1382622617,
                                           "operator_cardinality": 80097,
@@ -221,11 +221,11 @@
                                             ],
                                             "Estimated Cardinality": "1223312"
                                           },
-                                          "cpu_time": 0.7659671129999999,
+                                          "cpu_time": 0.7783796089999998,
                                           "children": [
                                             {
                                               "result_set_size": 5766984,
-                                              "operator_timing": 0.013147886999999999,
+                                              "operator_timing": 0.02897122200000001,
                                               "operator_rows_scanned": 0,
                                               "cumulative_rows_scanned": 1382622617,
                                               "operator_cardinality": 80097,
@@ -237,11 +237,11 @@
                                                 "Conditions": "ss_item_sk = i_item_sk",
                                                 "Estimated Cardinality": "1223312"
                                               },
-                                              "cpu_time": 0.7598150929999998,
+                                              "cpu_time": 0.7723492629999998,
                                               "children": [
                                                 {
                                                   "result_set_size": 3246168,
-                                                  "operator_timing": 0.08110049700000001,
+                                                  "operator_timing": 0.081521669,
                                                   "operator_rows_scanned": 0,
                                                   "cumulative_rows_scanned": 1382520617,
                                                   "operator_cardinality": 270514,
@@ -253,11 +253,11 @@
                                                     "Conditions": "ss_sold_date_sk = d_date_sk",
                                                     "Estimated Cardinality": "5759882"
                                                   },
-                                                  "cpu_time": 0.7260969379999997,
+                                                  "cpu_time": 0.7289535019999999,
                                                   "children": [
                                                     {
                                                       "result_set_size": 3246168,
-                                                      "operator_timing": 0.6448341899999998,
+                                                      "operator_timing": 0.6471498979999999,
                                                       "operator_rows_scanned": 1382447568,
                                                       "cumulative_rows_scanned": 1382447568,
                                                       "operator_cardinality": 270514,
@@ -274,12 +274,12 @@
                                                         ],
                                                         "Estimated Cardinality": "28800991"
                                                       },
-                                                      "cpu_time": 0.6448341899999998,
+                                                      "cpu_time": 0.6471498979999999,
                                                       "children": []
                                                     },
                                                     {
                                                       "result_set_size": 124,
-                                                      "operator_timing": 7.766e-06,
+                                                      "operator_timing": 1.2788999999999999e-05,
                                                       "operator_rows_scanned": 0,
                                                       "cumulative_rows_scanned": 73049,
                                                       "operator_cardinality": 31,
@@ -290,11 +290,11 @@
                                                         "Expression": "(d_date_sk BETWEEN 2450816 AND 2452642)",
                                                         "Estimated Cardinality": "14609"
                                                       },
-                                                      "cpu_time": 0.000162251,
+                                                      "cpu_time": 0.000281935,
                                                       "children": [
                                                         {
                                                           "result_set_size": 124,
-                                                          "operator_timing": 0.000154485,
+                                                          "operator_timing": 0.000269146,
                                                           "operator_rows_scanned": 73049,
                                                           "cumulative_rows_scanned": 73049,
                                                           "operator_cardinality": 31,
@@ -308,7 +308,7 @@
                                                             "Filters": "d_date>='1998-04-14'::DATE AND d_date<='1998-05-14'::DATE",
                                                             "Estimated Cardinality": "14609"
                                                           },
-                                                          "cpu_time": 0.000154485,
+                                                          "cpu_time": 0.000269146,
                                                           "children": []
                                                         }
                                                       ]
@@ -317,7 +317,7 @@
                                                 },
                                                 {
                                                   "result_set_size": 2176848,
-                                                  "operator_timing": 0.0020249290000000004,
+                                                  "operator_timing": 0.001426355,
                                                   "operator_rows_scanned": 0,
                                                   "cumulative_rows_scanned": 102000,
                                                   "operator_cardinality": 30234,
@@ -328,11 +328,11 @@
                                                     "Expression": "((i_category = 'Women') OR (i_category = 'Jewelry') OR (i_category = 'Books'))",
                                                     "Estimated Cardinality": "20400"
                                                   },
-                                                  "cpu_time": 0.020570268000000006,
+                                                  "cpu_time": 0.014424538999999998,
                                                   "children": [
                                                     {
                                                       "result_set_size": 7344000,
-                                                      "operator_timing": 0.018545339000000004,
+                                                      "operator_timing": 0.012998183999999998,
                                                       "operator_rows_scanned": 102000,
                                                       "cumulative_rows_scanned": 102000,
                                                       "operator_cardinality": 102000,
@@ -353,7 +353,7 @@
                                                         "Filters": "optional: i_category IN ('Women', 'Jewelry', 'Books')",
                                                         "Estimated Cardinality": "102000"
                                                       },
-                                                      "cpu_time": 0.018545339000000004,
+                                                      "cpu_time": 0.012998183999999998,
                                                       "children": []
                                                     }
                                                   ]
