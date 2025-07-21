@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(FetchContent)
 FetchContent_Declare(
   pybind11
-  URL https://github.com/pybind/pybind11/archive/refs/tags/v2.13.4.tar.gz
+  URL https://github.com/pybind/pybind11/archive/refs/tags/v3.0.0.tar.gz
 )
 FetchContent_MakeAvailable(pybind11)
 
