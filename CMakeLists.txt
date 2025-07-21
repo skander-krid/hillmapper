@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Fetch pybind11 automatically (no system install needed)
+# Fetch pybind11 automatically
 include(FetchContent)
 FetchContent_Declare(
   pybind11
@@ -17,7 +17,14 @@ FetchContent_MakeAvailable(pybind11)
 # Build the Python extension
 pybind11_add_module(_hillmapper ${CMAKE_CURRENT_SOURCE_DIR}/src/hillmapper.cpp)
 
-# Output compiled extension into the Python package folder
+# Put the output into the package directory
 set_target_properties(_hillmapper PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/hillmapper
+)
+
+# Install the compiled extension into the wheel package (hillmapper/)
+install(TARGETS _hillmapper
+    LIBRARY DESTINATION hillmapper  # Linux/macOS
+    ARCHIVE DESTINATION hillmapper  # Static libs, if any
+    RUNTIME DESTINATION hillmapper  # Windows DLLs
 )
