@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=42", "wheel", "scikit-build", "cmake", "pybind11", "cibuildwheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hillmapper"
+version = "0.1.0"
+description = "Hillmapper C++ extension"
+authors = [{name="Skander Krid", email="kridskander@gmail.com"}]
+license = "MIT"
+requires-python = ">=3.9"
+dependencies = []
