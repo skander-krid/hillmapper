@@ -1,3 +1,10 @@
+include(FetchContent)
+FetchContent_Declare(
+  pybind11
+  GIT_REPOSITORY https://github.com/pybind/pybind11.git
+  GIT_TAG latest stable
+)
+FetchContent_MakeAvailable(pybind11)
 cmake_minimum_required(VERSION 3.15)
 project(hillmapper LANGUAGES CXX)
 
