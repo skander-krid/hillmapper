@@ -18,9 +18,9 @@ FetchContent_MakeAvailable(pybind11)
 pybind11_add_module(_hillmapper ${CMAKE_CURRENT_SOURCE_DIR}/src/hillmapper.cpp)
 
 # Put the output into the package directory
-set_target_properties(_hillmapper PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/hillmapper
-)
+# set_target_properties(_hillmapper PROPERTIES
+#     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/hillmapper
+# )
 
 # Install the compiled extension into the wheel package (hillmapper/)
 install(TARGETS _hillmapper
