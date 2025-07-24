@@ -6,7 +6,13 @@ build-backend = "setuptools.build_meta"
 name = "hillmapper"
 version = "0.1.0"
 description = "Hillmapper C++ extension"
-authors = [{name="Skander Krid", email="kridskander@gmail.com"}]
-license = "MIT"
+readme = "README.md"
+authors = [
+    { name = "Skander Krid", email = "kridskander@gmail.com" }
+]
 requires-python = ">=3.11"
 dependencies = []
+license = "MIT"
+license-files = [
+    "LICENSE",
+]

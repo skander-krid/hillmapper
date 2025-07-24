@@ -391,7 +391,7 @@ std::pair<Distance, Assignment> find_optimal_bijection(
 	return {best_distance, best_assignment};
 }
 
-PYBIND11_MODULE(bktree, m)
+PYBIND11_MODULE(_hillmapper, m)
 {
 	m.def("find_optimal_bijection", &find_optimal_bijection, py::arg("n_threads"),
 	      py::arg("n_iterations_per_thread"), py::arg("redset_scanset_counters"),

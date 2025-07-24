@@ -1,17 +1,14 @@
 name: Build Wheels
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
-  pull_request:
 
 jobs:
   build_wheels:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [macos-latest, ubuntu-latest] # windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -30,3 +27,31 @@ jobs:
         with:
           name: wheels-${{ matrix.os }}
           path: dist/*.whl
+
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: build_wheels
+
+    steps:
+      # Download all wheels into ./artifacts (one folder per OS)
+      - uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      # Collect all wheels from ./artifacts into ./dist
+      - name: Collect wheels into dist/
+        run: |
+          mkdir -p dist
+          find artifacts -type f -name "*.whl" -exec cp {} dist/ \;
+          find artifacts -type f -name "*.tar.gz" -exec cp {} dist/ \;
+
+      - name: Show collected wheels
+        run: ls -lh dist
+        
+      # Publish to PyPi
+      - name: Upload to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
